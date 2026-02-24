@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>私密感官空间 - 全能旗舰店</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/vue-router@4"></script>
+    <style>
+        :root {
+            --primary: #ff2d55;
+            --bg-dark: #0f0c13;
+            --card-bg: #1e1a26;
+            --glass: rgba(255, 255, 255, 0.08);
+            --nav-bg: rgba(30, 20, 45, 0.95);
+            --text-dim: #a093b1;
+            --container-width: 1200px;
+        }
+
+        body {
+            margin: 0; background: var(--bg-dark);
+            color: white; font-family: 'PingFang SC', 'Helvetica Neue', sans-serif;
+            overflow-x: hidden; -webkit-tap-highlight-color: transparent;
+        }
+
+        /* 响应式容器 */
+        #app { 
+            min-height: 100vh;
+            max-width: var(--container-width);
+            margin: 0 auto;
+            position: relative;
+        }
+
+        /* --- 年龄验证 (居中遮罩) --- */
+        .age-gate {
+            position: fixed; inset: 0; z-index: 9999;
+            background: radial-gradient(circle at center, #2a1b3d 0%, #0f0c13 100%);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .glass-card {
+            background: var(--glass); backdrop-filter: blur(20px);
+            padding: 40px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.1);
+            text-align: center; width: 85%; max-width: 400px;
+        }
+        .btn-confirm {
+            background: var(--primary); border: none; color: white;
+            padding: 14px; border-radius: 25px; font-weight: bold; width: 100%;
+            margin-top: 20px; cursor: pointer; transition: 0.3s;
+        }
+        .btn-confirm:hover { transform: scale(1.05); box-shadow: 0 5px 15px rgba(255, 45, 85, 0.4); }
+
+        /* --- 响应式导航栏 --- */
+        .tab-bar {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            width: 90%; max-width: 500px; height: 65px; background: var(--nav-bg);
+            backdrop-filter: blur(15px); border-radius: 30px;
+            display: flex; justify-content: space-around; align-items: center;
+            border: 1px solid rgba(255,255,255,0.1); z-index: 100;
+        }
+
+        /* PC端适配：如果屏幕宽度 > 1024px，导航移到左侧或顶部 */
+        @media (min-width: 1024px) {
+            .tab-bar {
+                top: 20px; bottom: auto; left: 50%; width: 600px; height: 50px;
+            }
+        }
+
+        .tab-item { text-decoration: none; color: #888; font-size: 11px; display: flex; flex-direction: column; align-items: center; transition: 0.3s; }
+        .router-link-active { color: var(--primary); font-weight: bold; }
+        .tab-item span { font-size: 20px; margin-bottom: 2px; }
+        .tab-item:hover { color: var(--primary); }
+
+        /* --- 分类页布局 (核心兼容优化) --- */
+        .category-container { display: flex; height: calc(100vh - 100px); }
+        .side-nav { width: 100px; background: rgba(0,0,0,0.2); overflow-y: auto; scrollbar-width: none; flex-shrink: 0; }
+        .side-nav::-webkit-scrollbar { display: none; }
+        .nav-item { padding: 20px 10px; font-size: 13px; color: #888; text-align: center; cursor: pointer; border-left: 3px solid transparent; }
+        .nav-item.active { color: var(--primary); background: var(--bg-dark); font-weight: bold; border-left-color: var(--primary); }
+        
+        .main-content { flex: 1; overflow-y: auto; padding: 20px; }
+        .sub-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 20px 15px; }
+        .icon-box { background: var(--card-bg); aspect-ratio: 1/1; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 32px; border: 1px solid rgba(255,255,255,0.03); transition: 0.2s; }
+        .icon-box:hover { transform: translateY(-5px); background: #2a2435; border-color: var(--primary); }
+        .sub-label { font-size: 11px; color: #bbb; text-align: center; margin-top: 8px; display: block; }
+
+        /* --- 发现页 (瀑布流响应式) --- */
+        .discover-container { padding: 20px; }
+        .waterfall { column-count: 2; column-gap: 15px; }
+        @media (min-width: 768px) { .waterfall { column-count: 3; } }
+        @media (min-width: 1024px) { .waterfall { column-count: 4; } }
+        
+        .post-card { break-inside: avoid; background: var(--card-bg); border-radius: 15px; margin-bottom: 15px; overflow: hidden; transition: 0.3s; }
+        .post-card:hover { transform: scale(1.02); }
+        .post-img { width: 100%; display: flex; align-items: center; justify-content: center; font-size: 40px; background: #2d2438; }
+
+        /* --- 私享页 --- */
+        .profile-container { max-width: 600px; margin: 0 auto; }
+        .profile-header { padding: 60px 20px 30px; text-align: center; }
+        .big-avatar { width: 80px; height: 80px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 40px; margin: 0 auto 15px; box-shadow: 0 10px 20px rgba(255,45,85,0.2); }
+        .menu-list { margin: 20px; background: var(--card-bg); border-radius: 20px; overflow: hidden; }
+        .menu-row { padding: 18px 20px; border-bottom: 1px solid rgba(255,255,255,0.03); display: flex; justify-content: space-between; font-size: 14px; cursor: pointer; }
+        .menu-row:hover { background: rgba(255,255,255,0.02); }
+
+        /* 通用动画 */
+        .v-enter-active, .v-leave-active { transition: opacity 0.3s ease, transform 0.3s ease; }
+        .v-enter-from { opacity: 0; transform: translateY(10px); }
+        .v-leave-to { opacity: 0; transform: translateY(-10px); }
+    </style>
+</head>
+<body>
+    
+    <div id="app">
+        <transition>
+            <div v-if="!isAdult" class="age-gate">
+                <div class="glass-card">
+                    <div style="font-size: 50px;">🔞</div>
+                    <h2 style="margin: 15px 0 5px;">私密感官空间</h2>
+                    <p style="color: #888; font-size: 14px;">网页已开启加密访问模式<br>未满18岁禁止进入</p>
+                    <button class="btn-confirm" @click="confirmAge">我已成年，进入探索</button>
+                </div>
+            </div>
+        </transition>
+
+        <router-view v-slot="{ Component }">
+            <transition mode="out-in">
+                <component :is="Component" />
+            </transition>
+        </router-view>
+
+        <nav class="tab-bar">
+            <router-link to="/" class="tab-item"><span>🏠</span>精选</router-link>
+            <router-link to="/category" class="tab-item"><span>💎</span>系列</router-link>
+            <router-link to="/discover" class="tab-item"><span>✨</span>灵感</router-link>
+            <router-link to="/profile" class="tab-item"><span>👤</span>私享</router-link>
+        </nav>
+    </div>
+
+    <script type="text/x-template" id="home-tpl">
+        <div class="home" style="padding: 20px;">
+            <div style="padding: 40px 0;">
+                <h1 style="font-size: clamp(24px, 5vw, 40px); margin: 0;">重塑<span style="color:var(--primary)">亲密</span>边界</h1>
+                <p style="color: #666; font-size: 14px; margin-top: 10px;">发现专属于你的私密愉悦</p>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px;">
+                <div class="post-card" v-for="i in 6" style="padding:15px">
+                    <div class="post-img" style="height:160px; border-radius:12px">🕯️</div>
+                    <div style="margin-top:12px; font-size:14px; font-weight:bold;">感官探索：氛围香氛系列</div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+                        <span style="color:var(--primary); font-weight:bold;">￥299.00</span>
+                        <button style="background:var(--primary); border:none; color:white; border-radius:50%; width:24px; height:24px; cursor:pointer;">+</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </script>
+
+    <script type="text/x-template" id="category-tpl">
+        <div class="category-container">
+            <aside class="side-nav">
+                <div v-for="(cat, idx) in categories" 
+                     :class="['nav-item', { active: activeIdx === idx }]"
+                     @click="activeIdx = idx">
+                    {{ cat.name }}
+                </div>
+            </aside>
+            <main class="main-content">
+                <div style="margin-bottom:20px; font-size:12px; color:#555">系列 / {{ categories[activeIdx].name }}</div>
+                <div class="sub-grid">
+                    <div class="sub-item" v-for="sub in categories[activeIdx].subs">
+                        <div class="icon-box">{{ sub.icon }}</div>
+                        <span class="sub-label">{{ sub.name }}</span>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </script>
+
+    <script type="text/x-template" id="discover-tpl">
+        <div class="discover-container">
+            <h2 style="margin-bottom:20px">灵感社区</h2>
+            <div class="waterfall">
+                <div class="post-card" v-for="p in posts">
+                    <div class="post-img" :style="{height: p.h + 'px'}">{{p.emoji}}</div>
+                    <div style="padding:12px">
+                        <div style="font-size:13px; font-weight:bold; margin-bottom:8px">{{p.title}}</div>
+                        <div style="display:flex; align-items:center; font-size:11px; color:#666">
+                            <span style="background:#444; width:16px; height:16px; border-radius:50%; margin-right:5px; display:inline-block"></span>
+                            {{p.user}}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </script>
+
+    <script type="text/x-template" id="profile-tpl">
+        <div class="profile-container">
+            <div class="profile-header">
+                <div class="big-avatar">👤</div>
+                <h2 style="margin:0">Sense_Explorer</h2>
+                <p style="font-size:12px; color:var(--text-dim); margin-top:5px;">私享会 · 钻石成员</p>
+            </div>
+            <div class="menu-list">
+                <div class="menu-row"><span>我的收藏</span><span>12 ></span></div>
+                <div class="menu-row"><span>我的订单</span><span>></span></div>
+                <div class="menu-row"><span>隐私加密模式</span><span>🔒</span></div>
+                <div class="menu-row"><span>在线客服</span><span>💬</span></div>
+                <div class="menu-row" style="color:var(--primary)"><span>退出登录</span></div>
+            </div>
+            <p style="text-align:center; font-size:10px; color:#333; margin-top:40px;">Version 2.4.0 Encrypted</p>
+        </div>
+    </script>
+
+    <script>
+        const { createApp, ref } = Vue;
+        const { createRouter, createWebHashHistory } = VueRouter;
+
+        const ALL_CATEGORIES = [
+            { name: '套套专区', subs: [{name:'全部', icon:'💙'}, {name:'玻尿酸', icon:'💧'}, {name:'超薄', icon:'💎'}, {name:'持久', icon:'⏱️'}, {name:'螺纹', icon:'🌀'}, {name:'功能套', icon:'💖'}, {name:'家庭装', icon:'🏠'}, {name:'女用', icon:'👩'}, {name:'狼牙套', icon:'🐺'}, {name:'指套', icon:'☝️'}] },
+            { name: '女生玩具', subs: [{name:'全部', icon:'🎀'}, {name:'震动棒', icon:'🪄'}, {name:'AV棒', icon:'🎤'}, {name:'点潮笔', icon:'🖋️'}, {name:'吮吸器', icon:'👄'}, {name:'跳蛋', icon:'🥚'}, {name:'炮机', icon:'⚙️'}, {name:'胸部玩具', icon:'🍒'}, {name:'缩阴球', icon:'🔮'}, {name:'丁丁', icon:'🍆'}, {name:'后庭玩具', icon:'🍭'}, {name:'女王享受', icon:'👸'}] },
+            { name: '男生玩具', subs: [{name:'全部', icon:'🧊'}, {name:'名器', icon:'🍑'}, {name:'手动飞机杯', icon:'🥤'}, {name:'电动飞机杯', icon:'🔋'}, {name:'锁精环', icon:'💍'}, {name:'后庭按摩', icon:'🎗️'}, {name:'训练器', icon:'💪'}, {name:'马眼玩具', icon:'🍌'}, {name:'飞机杯保养', icon:'🧼'}] },
+            { name: '双人共用', subs: [{name:'全部', icon:'👩‍❤️‍👨'}, {name:'共震器', icon:'📡'}, {name:'遥控玩具', icon:'🎮'}] },
+            { name: '五十度灰', subs: [{name:'全部', icon:'👺'}, {name:'套装', icon:'🧶'}, {name:'惩罚挑逗', icon:'🎾'}, {name:'束缚捆绑', icon:'⛓️'}, {name:'宠物装饰', icon:'🦄'}, {name:'贞操锁', icon:'🗝️'}, {name:'滴蜡', icon:'🕯️'}] },
+            { name: '私处护理', subs: [{name:'全部', icon:'🧴'}, {name:'洗护液', icon:'🧪'}, {name:'美白', icon:'✨'}, {name:'护理湿巾', icon:'🧻'}, {name:'男性护理', icon:'🛡️'}] },
+            { name: '生理期间', subs: [{name:'全部', icon:'🩹'}, {name:'减少疼痛', icon:'💊'}, {name:'月经杯', icon:'🍷'}, {name:'卫生棉条', icon:'🧬'}] },
+            { name: '性事增强', subs: [{name:'全部', icon:'🧠'}, {name:'延时', icon:'⏳'}, {name:'高潮液', icon:'🧪'}, {name:'增长增粗', icon:'💪'}, {name:'调情香水', icon:'💨'}] },
+            { name: '呵护健康', subs: [{name:'全部', icon:'🩺'}, {name:'排卵检测', icon:'🌡️'}, {name:'早孕检测', icon:'🧪'}] },
+            { name: '口服保健', subs: [{name:'全部', icon:'💊'}, {name:'男士口服', icon:'🧔'}, {name:'女士口服', icon:'👩'}] },
+            { name: '润滑清洁', subs: [{name:'全部', icon:'💦'}, {name:'润滑液', icon:'🧴'}, {name:'清洁用品', icon:'🧼'}, {name:'酒店用品', icon:'🏨'}] },
+            { name: '服饰内衣', subs: [{name:'全部', icon:'👘'}, {name:'情趣内衣', icon:'👙'}, {name:'丝袜', icon:'👣'}, {name:'情侣内裤', icon:'👩‍❤️‍👨'}, {name:'乳胶Rubber', icon:'🖤'}] },
+            { name: '课程游戏', subs: [{name:'全部', icon:'🃏'}, {name:'情趣桌游', icon:'🎲'}, {name:'氛围营造', icon:'🕯️'}] }
+        ];
+
+        const routes = [
+            { path: '/', component: { template: '#home-tpl' } },
+            { path: '/category', component: { template: '#category-tpl', setup(){ return { activeIdx: ref(0), categories: ALL_CATEGORIES } } } },
+            { path: '/discover', component: { template: '#discover-tpl', setup(){ return { posts: [{title:'深夜氛围布置指南', h:200, emoji:'🕯️', user:'月下'}, {title:'吸吮器真实测评报告', h:240, emoji:'👄', user:'玩具说'}, {title:'私密护理避坑指南', h:180, emoji:'🧪', user:'Sense_Official'}, {title:'情侣共震的第100种玩法', h:220, emoji:'📡', user:'小野'}] } } } },
+            { path: '/profile', component: { template: '#profile-tpl' } }
+        ];
+
+        const router = createRouter({ history: createWebHashHistory(), routes });
+
+        createApp({
+            setup() {
+                const isAdult = ref(localStorage.getItem('isAdult') === 'true');
+                const confirmAge = () => { isAdult.value = true; localStorage.setItem('isAdult', 'true'); };
+                return { isAdult, confirmAge };
+            }
+        }).use(router).mount('#app');
+    </script>
+</body>
+</html>
